@@ -53,14 +53,29 @@ impl Ray {
     }
 
     pub fn new_prime (x : u32, y : u32, camera : &Camera) -> Self {
-        let fov_adjustment = (camera.fov().to_radians() / 2.0).tan();
-        let aspect_ratio = (camera.width() as f32) / (camera.height() as f32);
-        let sensor_x = ((((x as f32 + 0.5) / camera.width() as f32) * 2.0 - 1.0) * aspect_ratio) * fov_adjustment;
-        let sensor_y = (1.0 - ((y as f32 + 0.5) / camera.height() as f32) * 2.0) * fov_adjustment;
+        let camera_direction = camera.direction().to_owned();
+        let camera_origin = camera.origin().to_owned();
+        let fov = camera.fov();
+        let width = camera.width();
+        let height = camera.height();
+
+        let aspect_ratio = width as f32 / height as f32;
+        let sensor_x = (((x as f32 + 0.5) / width as f32) * 2.0 - 1.0) * aspect_ratio * (fov / 2.0).tan();
+        let sensor_y = (1.0 - ((y as f32 + 0.5) / height as f32) * 2.0) * (fov / 2.0).tan();
 
         let direction = Vector3::new(sensor_x, sensor_y, -1.0).normalize();
+        
+        // Now we have a direction vector, but it's in camera space. We need to transform it into world space.
+        // We can do this by rotating the vector by the camera's rotation matrix.
 
-        Self::new(camera.origin().to_owned(), direction)
+        let rotation_matrix = nalgebra::Rotation3::from_axis_angle(&nalgebra::Vector3::y_axis(), camera_direction.y)
+            * nalgebra::Rotation3::from_axis_angle(&nalgebra::Vector3::x_axis(), camera_direction.x);
+        let direction = rotation_matrix * direction;
+
+        Self {
+            origin: camera_origin,
+            direction,
+        }
     }
 
     pub(crate) fn point_at(&self, distance: f32) -> nalgebra::OPoint<f32, nalgebra::Const<3>> {

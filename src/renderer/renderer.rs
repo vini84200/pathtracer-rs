@@ -1,7 +1,16 @@
-use nalgebra::{Vector3};
-use winit::{event::WindowEvent, window::Window};
+use crate::{
+    color,
+    geometry::{Plane, Point, Sphere},
+    light::{DirectionalLight, PointLight},
+    raytracer::Pathtracer,
+    renderer::texture,
+};
+use nalgebra::Vector3;
 use wgpu::util::DeviceExt;
-use crate::{renderer::texture, raytracer::Pathtracer, geometry::{Sphere, Plane, Point}, color, light::{PointLight, DirectionalLight}};
+use winit::{
+    event::{VirtualKeyCode, WindowEvent},
+    window::Window,
+};
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
@@ -27,17 +36,25 @@ impl Vertex {
 
 // Cria um retângulo que ocupa toda a tela
 const VERTICES: &[Vertex] = &[
-    Vertex { position: [-1.0, 1.0, 0.0], tex_coords: [1.0, 0.0]},
-    Vertex { position: [1.0, 1.0, 0.0], tex_coords: [0.0, 0.0]},
-    Vertex { position: [-1.0, -1.0, 0.0], tex_coords:[1.0,1.0]},
-    Vertex { position: [1.0, -1.0, 0.0], tex_coords: [0.0, 1.0]},
+    Vertex {
+        position: [-1.0, 1.0, 0.0],
+        tex_coords: [1.0, 0.0],
+    },
+    Vertex {
+        position: [1.0, 1.0, 0.0],
+        tex_coords: [0.0, 0.0],
+    },
+    Vertex {
+        position: [-1.0, -1.0, 0.0],
+        tex_coords: [1.0, 1.0],
+    },
+    Vertex {
+        position: [1.0, -1.0, 0.0],
+        tex_coords: [0.0, 1.0],
+    },
 ];
 
-const INDICES: &[u16] = &[
-    0, 2, 1,
-    1, 2, 3
-];
-
+const INDICES: &[u16] = &[0, 2, 1, 1, 2, 3];
 
 pub struct State {
     surface: wgpu::Surface,
@@ -53,6 +70,9 @@ pub struct State {
     diffuse_bind_group: wgpu::BindGroup,
     diffuse_texture: texture::Texture,
     pathtracer: crate::raytracer::Pathtracer,
+    last_update: std::time::Instant,
+    mouse_pressed: bool,
+    mouse_position: winit::dpi::PhysicalPosition<f64>,
 }
 
 impl State {
@@ -111,59 +131,57 @@ impl State {
         };
         surface.configure(&device, &config);
 
-        let diffuse_texture = texture::Texture::from_bytes(&device, &queue, include_bytes!("../../assets/texture.png"), "diffuse_texture").unwrap();
-
+        let diffuse_texture = texture::Texture::from_bytes(
+            &device,
+            &queue,
+            include_bytes!("../../assets/texture.png"),
+            "diffuse_texture",
+        )
+        .unwrap();
 
         let texture_bind_group_layout =
-        device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Texture {
-                        multisampled: false,
-                        view_dimension: wgpu::TextureViewDimension::D2,
-                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Texture {
+                            multisampled: false,
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                        },
+                        count: None,
                     },
-                    count: None,
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        // This should match the filterable field of the
+                        // corresponding Texture entry above.
+                        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                        count: None,
+                    },
+                ],
+                label: Some("texture_bind_group_layout"),
+            });
+
+        let diffuse_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &texture_bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(&diffuse_texture.view),
                 },
-                wgpu::BindGroupLayoutEntry {
+                wgpu::BindGroupEntry {
                     binding: 1,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    // This should match the filterable field of the
-                    // corresponding Texture entry above.
-                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-                    count: None,
+                    resource: wgpu::BindingResource::Sampler(&diffuse_texture.sampler),
                 },
             ],
-            label: Some("texture_bind_group_layout"),
+            label: Some("diffuse_bind_group"),
         });
 
-
-        let diffuse_bind_group = device.create_bind_group(
-            &wgpu::BindGroupDescriptor {
-                layout: &texture_bind_group_layout,
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: wgpu::BindingResource::TextureView(&diffuse_texture.view),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 1,
-                        resource: wgpu::BindingResource::Sampler(&diffuse_texture.sampler),
-                    }
-                ],
-                label: Some("diffuse_bind_group"),
-            }
-        );
-
-
-        
-         
-            
         let shader = if cfg!(fragment_pathtracer) {
             device.create_shader_module(wgpu::include_wgsl!("../shader.wgsl"))
-        }  else {
+        } else {
             device.create_shader_module(wgpu::include_wgsl!("../image_shader.wgsl"))
         };
         let render_pipeline_layout =
@@ -179,9 +197,7 @@ impl State {
             vertex: wgpu::VertexState {
                 module: &shader,
                 entry_point: "vs_main",
-                buffers: &[
-                    Vertex::desc(),
-                ],
+                buffers: &[Vertex::desc()],
             },
             fragment: Some(wgpu::FragmentState {
                 module: &shader,
@@ -216,13 +232,11 @@ impl State {
             usage: wgpu::BufferUsages::VERTEX,
         });
 
-        let index_buffer = device.create_buffer_init(
-            &wgpu::util::BufferInitDescriptor {
-                label: Some("Index Buffer"),
-                contents: bytemuck::cast_slice(INDICES),
-                usage: wgpu::BufferUsages::INDEX,
-            }
-        );
+        let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Index Buffer"),
+            contents: bytemuck::cast_slice(INDICES),
+            usage: wgpu::BufferUsages::INDEX,
+        });
 
         let num_indices = INDICES.len() as u32;
 
@@ -241,7 +255,10 @@ impl State {
             num_indices,
             diffuse_bind_group,
             diffuse_texture,
-            pathtracer
+            pathtracer,
+            last_update: std::time::Instant::now(),
+            mouse_pressed: false,
+            mouse_position: Default::default(),
         }
     }
 
@@ -259,10 +276,78 @@ impl State {
     }
 
     pub fn input(&mut self, event: &WindowEvent) -> bool {
-        false
+        match event {
+            WindowEvent::KeyboardInput { input, .. } => match input.virtual_keycode {
+                Some(winit::event::VirtualKeyCode::Space) => {
+                    self.pathtracer.render();
+                    true
+                }
+                Some(VirtualKeyCode::W) => {
+                    if input.state == winit::event::ElementState::Pressed {
+                        self.pathtracer.camera_mut().move_forward(true);
+                    } else if input.state == winit::event::ElementState::Released {
+                        self.pathtracer.camera_mut().move_forward(false);
+                    };
+                    true
+                }
+                Some(VirtualKeyCode::S) => {
+                    if input.state == winit::event::ElementState::Pressed {
+                        self.pathtracer.camera_mut().move_backward(true);
+                    } else if input.state == winit::event::ElementState::Released {
+                        self.pathtracer.camera_mut().move_backward(false);
+                    };
+                    true
+                }
+                Some(VirtualKeyCode::A) => {
+                    if input.state == winit::event::ElementState::Pressed {
+                        self.pathtracer.camera_mut().move_left(true);
+                    } else if input.state == winit::event::ElementState::Released {
+                        self.pathtracer.camera_mut().move_left(false);
+                    };
+                    true
+                }
+                Some(VirtualKeyCode::D) => {
+                    if input.state == winit::event::ElementState::Pressed {
+                        self.pathtracer.camera_mut().move_right(true);
+                    } else if input.state == winit::event::ElementState::Released {
+                        self.pathtracer.camera_mut().move_right(false);
+                    };
+                    true
+                }
+                _ => false,
+            },
+            WindowEvent::MouseInput {
+                state,
+                button: winit::event::MouseButton::Left,
+                ..
+            } => {
+                if *state == winit::event::ElementState::Pressed {
+                    self.mouse_pressed = true;
+                } else if *state == winit::event::ElementState::Released {
+                    self.mouse_pressed = false;
+                };
+                true
+            }
+            WindowEvent::CursorMoved { device_id, position, modifiers } => {
+                if self.mouse_pressed {
+                    let delta_x = (self.mouse_position.x - position.x) as f32;
+                    let delta_y = (self.mouse_position.y - position.y) as f32;
+                    self.pathtracer.camera_mut().rotate(delta_x as f32, delta_y as f32);
+                    // self.window.set_cursor_position(winit::dpi::PhysicalPosition::new(self.size.width as i32 / 2, self.size.height as i32 / 2)).unwrap();
+                    // self.mouse_position = winit::dpi::PhysicalPosition::new(self.size.width as f64 / 2.0f64, self.size.height as f64 / 2.0f64);
+                }
+                self.mouse_position = *position;
+                true
+            }
+            _ => false,
+        }
     }
 
     pub fn update(&mut self) {
+        let now = std::time::Instant::now();
+        let delta_time = (now - self.last_update).as_secs_f32();
+        self.last_update = now;
+        self.pathtracer.camera_mut().update(delta_time);
         self.pathtracer.render();
     }
 
@@ -280,53 +365,56 @@ impl State {
         // Update the image data
 
         let image = self.pathtracer.present();
-        let new_texture = texture::Texture::from_image(&self.device, &self.queue, &image, Some("diffuse_texture")).unwrap();
+        let new_texture = texture::Texture::from_image(
+            &self.device,
+            &self.queue,
+            &image,
+            Some("diffuse_texture"),
+        )
+        .unwrap();
         self.diffuse_texture = new_texture;
         let texture_bind_group_layout =
-        self.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            self.device
+                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                    entries: &[
+                        wgpu::BindGroupLayoutEntry {
+                            binding: 0,
+                            visibility: wgpu::ShaderStages::FRAGMENT,
+                            ty: wgpu::BindingType::Texture {
+                                multisampled: false,
+                                view_dimension: wgpu::TextureViewDimension::D2,
+                                sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                            },
+                            count: None,
+                        },
+                        wgpu::BindGroupLayoutEntry {
+                            binding: 1,
+                            visibility: wgpu::ShaderStages::FRAGMENT,
+                            // This should match the filterable field of the
+                            // corresponding Texture entry above.
+                            ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                            count: None,
+                        },
+                    ],
+                    label: Some("texture_bind_group_layout"),
+                });
+
+        let diffuse_bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &texture_bind_group_layout,
             entries: &[
-                wgpu::BindGroupLayoutEntry {
+                wgpu::BindGroupEntry {
                     binding: 0,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Texture {
-                        multisampled: false,
-                        view_dimension: wgpu::TextureViewDimension::D2,
-                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
-                    },
-                    count: None,
+                    resource: wgpu::BindingResource::TextureView(&self.diffuse_texture.view),
                 },
-                wgpu::BindGroupLayoutEntry {
+                wgpu::BindGroupEntry {
                     binding: 1,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    // This should match the filterable field of the
-                    // corresponding Texture entry above.
-                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-                    count: None,
+                    resource: wgpu::BindingResource::Sampler(&self.diffuse_texture.sampler),
                 },
             ],
-            label: Some("texture_bind_group_layout"),
+            label: Some("diffuse_bind_group"),
         });
-
-
-        let diffuse_bind_group = self.device.create_bind_group(
-            &wgpu::BindGroupDescriptor {
-                layout: &texture_bind_group_layout,
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: wgpu::BindingResource::TextureView(&self.diffuse_texture.view),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 1,
-                        resource: wgpu::BindingResource::Sampler(&self.diffuse_texture.sampler),
-                    }
-                ],
-                label: Some("diffuse_bind_group"),
-            }
-
-        );
         self.diffuse_bind_group = diffuse_bind_group;
-        
+
         {
             let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("Render Pass"),
@@ -351,7 +439,6 @@ impl State {
             render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
             render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
             render_pass.draw_indexed(0..self.num_indices, 00, 0..1)
-
         }
         self.queue.submit(std::iter::once(encoder.finish()));
         output.present();
@@ -360,30 +447,26 @@ impl State {
     }
 
     pub(crate) fn init(&mut self) {
-        let mut w = self.pathtracer.world();
-        w.add_object(
-            Box::new(Sphere::new(0.0, 0.0, -5.0, 1.0, color::RED))
-        );
-        w.add_object(
-            Box::new( Sphere::new(2.0, 0.0, -5.0, 1.0, color::GREEN)));
-        
+        let w = self.pathtracer.world();
+        w.add_object(Box::new(Sphere::new(0.0, 0.0, -5.0, 1.0, color::RED)));
+        w.add_object(Box::new(Sphere::new(2.0, 0.0, -5.0, 1.0, color::GREEN)));
 
-        w.add_object(
-                Box::new( Plane::new(Point::new(0.,-1.,0.), Vector3::new(0.,1.,0.), 
-                Box::new(crate::material::Diffuse::new(color::WHITE))
-            ))
-        );
+        w.add_object(Box::new(Plane::new(
+            Point::new(0., -1., 0.),
+            Vector3::new(0., 1., 0.),
+            Box::new(crate::material::Diffuse::new(color::WHITE)),
+        )));
 
-        w.add_light(
-            Box::new(
-                PointLight::new(Point::new(10., 5., -5.), color::WHITE, 4.)
-            )
-        );
+        w.add_light(Box::new(PointLight::new(
+            Point::new(10., 5., -5.),
+            color::WHITE,
+            4.,
+        )));
 
-        w.add_light(
-            Box::new(
-                DirectionalLight::new(Vector3::new(0., -1., -1.), color::WHITE, 0.8)
-            )
-        )
+        w.add_light(Box::new(DirectionalLight::new(
+            Vector3::new(0., -1., -1.),
+            color::WHITE,
+            0.8,
+        )))
     }
 }

@@ -16,7 +16,7 @@ impl Pathtracer {
     pub fn new(width : u32, height : u32) -> Self {
         let camera = Camera::new(
             Point::new(0.0, 0.0, 0.0), 
-            Vector3::new(0.0, 0.0, 1.0), 90.0,
+            Vector3::new(0.0, 0.0, -1.0), 90.0,
             width, 
             height);
         Self {
@@ -72,7 +72,7 @@ impl Pathtracer {
         let mut acc = ColorF32::new(0.0, 0.0, 0.0);
         for light in &self.world.lights {
             let direction_to_light = light.direction_from(&intersection.point).normalize();
-            let shadow_ray = Ray::new(intersection.point+direction_to_light*0.001, direction_to_light);
+            let shadow_ray = Ray::new(intersection.point+direction_to_light*0.0001, direction_to_light);
             let shadow_intersection = self.world.intersect(&shadow_ray);
             if let Some(blocking) = shadow_intersection {
                 if blocking.distance < direction_to_light.magnitude()  {
@@ -91,6 +91,10 @@ impl Pathtracer {
             acc = acc + color
         }
         acc
+    }
+
+    pub(crate) fn camera_mut(&mut self) -> &mut Camera {
+        &mut self.camera
     }
 
 }
