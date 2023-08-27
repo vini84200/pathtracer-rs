@@ -449,8 +449,12 @@ impl State {
 
     pub(crate) fn init(&mut self) {
         let w = self.pathtracer.world();
-        w.add_object(Box::new(Sphere::new(0.0, 0.0, -5.0, 1.0, color::RED)));
-        w.add_object(Box::new(Sphere::new(2.0, 0.0, -5.0, 1.0, color::GREEN)));
+        w.add_object(Box::new(
+            Sphere::new_with_material(0.0, 2.0, -4.0, 1.5, 
+                Box::new(crate::material::Reflective::new(color::RED, 0.8)))));
+        w.add_object(Box::new(
+            Sphere::new_with_material(3.0, 0.0, -5.0, 1.0, 
+                Box::new(crate::material::Reflective::new(color::GREEN, 0.5)))));
 
         w.add_object(Box::new(Plane::new(
             Point::new(0., -1., 0.),

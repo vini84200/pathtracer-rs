@@ -1,5 +1,6 @@
 use crate::{material::{Material, Diffuse}, color::ColorF32, camera::Camera, object::Object};
 use nalgebra::{Vector3, Point3};
+use rand::Rng;
 
 pub type Point = Point3<f32>;
 
@@ -68,9 +69,6 @@ impl Ray {
         // Now we have a direction vector, but it's in camera space. We need to transform it into world space.
         // We can do this by rotating the vector by the camera's rotation matrix.
 
-        let rotation_matrix = nalgebra::Rotation3::from_axis_angle(&nalgebra::Vector3::y_axis(), camera_direction.y)
-            * nalgebra::Rotation3::from_axis_angle(&nalgebra::Vector3::x_axis(), camera_direction.x);
-        let direction = rotation_matrix * direction;
 
         Self {
             origin: camera_origin,
@@ -80,6 +78,18 @@ impl Ray {
 
     pub(crate) fn point_at(&self, distance: f32) -> nalgebra::OPoint<f32, nalgebra::Const<3>> {
         self.origin + (self.direction * distance)
+    }
+
+    pub(crate) fn new_random(point: nalgebra::OPoint<f32, nalgebra::Const<3>>, normal: Vector3<f32>) -> Ray {
+        let mut rng = rand::thread_rng();
+        let mut direction = Vector3::new(rng.gen_range(-1.0..1.0), rng.gen_range(0.0..1.0), rng.gen_range(-1.0..1.0));
+        if direction.dot(&normal) < 0.0 {
+            direction = -direction;
+        }
+        Ray {
+            origin: point + (normal * 0.001),
+            direction: direction.normalize(),
+        }
     }
 }
 

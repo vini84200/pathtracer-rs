@@ -3,7 +3,7 @@ use std::f32::EPSILON;
 use image::{DynamicImage, GenericImage};
 use nalgebra::Vector3;
 
-use crate::{geometry::{Point, Ray}, camera::Camera, world::World, color::ColorF32};
+use crate::{geometry::{Point, Ray}, camera::Camera, world::World, color::ColorF32, material};
 pub struct Pathtracer {
     width: u32,
     height: u32,
@@ -40,21 +40,25 @@ impl Pathtracer {
         for y in 0..self.height {
             for x in 0..self.width {
                 let r = Ray::new_prime(x, y, &self.camera);
-                self.trace(r, x, y);
-
+                self.trace(r, x, y, 0);
             }
         }
         let elapsed = now.elapsed();
         println!("Elapsed: {} ms ({:.2} fps)", elapsed.as_millis(), 1000.0 / elapsed.as_millis() as f32);
     }
 
-    fn trace(&mut self, r: Ray, x: u32, y: u32) {
+    fn trace(&mut self, r: Ray, x: u32, y: u32, depth: u16) {
         if let Some(intersection) = self.world.intersect(&r) {
-            let color = self.object_color(intersection, x, y);
+            let mut color = ColorF32::new(0.0, 0.0, 0.0);
+            const SINGLE_SHOT_SAMPLES: i32 = 8;
+            for _ in 0..SINGLE_SHOT_SAMPLES {
+                color = color + self.object_color(&intersection, &r, 0);
+            }
+            color = color / SINGLE_SHOT_SAMPLES as f32;
             self.image.put_pixel(x, y, color.into());
         } else {
-            let c = self.world.background_color(r);
-            self.image.put_pixel(x, y, c);
+            let c = self.world.background_color(&r);
+            self.image.put_pixel(x, y, c.into());
         }
     }
 
@@ -67,29 +71,33 @@ impl Pathtracer {
     pub(crate) fn world(&mut self) -> &mut World{
         &mut self.world
     }
+    const RAYS: i32 = 2;
+    const MAX_DEPTH: u16 = 100;
 
-    fn object_color(&self, intersection: crate::world::Intersection<'_>, _x: u32, _y: u32) -> ColorF32 {
+    fn object_color(&self, intersection: &crate::world::Intersection<'_>, ray: &Ray, depth: u16) -> ColorF32 {
         let mut acc = ColorF32::new(0.0, 0.0, 0.0);
-        for light in &self.world.lights {
-            let direction_to_light = light.direction_from(&intersection.point).normalize();
-            let shadow_ray = Ray::new(intersection.point+direction_to_light*0.0001, direction_to_light);
-            let shadow_intersection = self.world.intersect(&shadow_ray);
-            if let Some(blocking) = shadow_intersection {
-                if blocking.distance < direction_to_light.magnitude()  {
-                    continue;
+        // Diffuse
+        {
+            let mut diffuse = ColorF32::new(0.0, 0.0, 0.0);
+            //
+            if depth < Self::MAX_DEPTH {
+                let random_ray = Ray::new_random(intersection.point, intersection.object.surface_normal(&intersection.point));
+                let random_intersection = self.world.intersect(&random_ray);
+                if let Some(random_intersection) = random_intersection {
+                    diffuse = self.object_color(&random_intersection, &random_ray, depth + 1) * 0.5;
+                } else {
+                    diffuse = self.world.background_color(&random_ray);
                 }
+            } else {
+                diffuse = self.world.background_color(ray);
             }
-            let light_intensity = light.intensity() / light.attenuation(direction_to_light.magnitude_squared() + EPSILON);
-            let light_reflected = intersection.object.material().albedo() / std::f32::consts::PI;
-            let light_color = light.color();
+            acc = acc + diffuse;
+        } 
+        // Reflection
 
-            let diffuse_factor = direction_to_light.normalize().dot(&intersection.object.surface_normal(&intersection.point));
-            let diffuse_color = intersection.object.material().color();
-            let diffuse = *light_color * light_intensity * diffuse_factor * diffuse_color;
-            let specular = ColorF32::new(0.0, 0.0, 0.0);
-            let color = (diffuse + specular) * light_reflected;
-            acc = acc + color
-        }
+        // Refraction
+
+        
         acc
     }
 
@@ -97,4 +105,8 @@ impl Pathtracer {
         &mut self.camera
     }
 
+}
+
+fn get_reflection_vector(normal: &Vector3<f32>, incident: &Vector3<f32>) -> Vector3<f32> {
+    incident - 2.0 * incident.dot(&normal) * normal
 }

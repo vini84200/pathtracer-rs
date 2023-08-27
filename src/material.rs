@@ -6,6 +6,9 @@ pub trait Material {
     fn albedo(&self) -> f32 {
         1.0
     }
+    fn is_reflective(&self) -> bool {
+        false
+    }
 }
 
 pub struct Diffuse {
@@ -22,5 +25,33 @@ impl Diffuse {
 impl Material for Diffuse {
     fn color(&self) -> ColorF32 {
         self.color
+    }
+}
+
+pub struct Reflective {
+    color: ColorF32,
+    albedo: f32,
+}
+
+impl Reflective {
+    pub fn new(color: crate::color::Color<f32>, albedo: f32) -> Self {
+        Self {
+            color,
+            albedo,
+        }
+    }
+}
+
+impl Material for Reflective {
+    fn color(&self) -> ColorF32 {
+        self.color
+    }
+
+    fn albedo(&self) -> f32 {
+        self.albedo
+    }
+
+    fn is_reflective(&self) -> bool {
+        true
     }
 }

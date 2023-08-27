@@ -1,4 +1,4 @@
-use std::ops::{Mul, Add};
+use std::ops::{Mul, Add, Div};
 
 use image::Pixel;
 
@@ -52,6 +52,14 @@ impl Mul<Self> for ColorF32 {
 
     fn mul(self, rhs: Self) -> Self::Output {
         Self::new(self.r * rhs.r, self.g * rhs.g, self.b * rhs.b)
+    }
+}
+
+impl Div<f32> for ColorF32 {
+    type Output = Self;
+
+    fn div(self, rhs: f32) -> Self::Output {
+        Self::new(self.r / rhs, self.g / rhs, self.b / rhs)
     }
 }
 

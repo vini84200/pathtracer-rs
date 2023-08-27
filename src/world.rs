@@ -43,11 +43,11 @@ impl World {
         closest
     }
 
-    pub(crate) fn background_color(&self, r: crate::geometry::Ray) -> image::Rgba<u8> {
+    pub(crate) fn background_color(&self, r: &crate::geometry::Ray) -> ColorF32 {
         let direction = r.direction.normalize();
         let t = 0.5 * (direction.y + 1.0);
             let white = ColorF32::new(1.0, 1.0, 1.0);
         let blue = ColorF32::new(0.5, 0.7, 1.0);
-        ColorF32::lerp(white, blue, t).into()
+        ColorF32::lerp(white, blue, t)
     }
 }
