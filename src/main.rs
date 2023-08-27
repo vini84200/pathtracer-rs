@@ -14,7 +14,7 @@ mod object;
 mod light;
 mod world;
 
-use raytracer::Pathtracer;
+
 
 #[tokio::main]
 async fn main() {
@@ -30,7 +30,7 @@ async fn run() {
         .build(&event_loop)
         .unwrap();
 
-    let mut state = renderer::renderer::State::new(window).await;
+    let mut state = renderer::state::State::new(window).await;
     state.init();
 
     event_loop.run(move |event, _, control_flow| match event {

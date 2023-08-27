@@ -1,4 +1,4 @@
-use crate::{object::Object, light::Light, color::{self, Color, ColorF32}};
+use crate::{object::Object, light::Light, color::ColorF32};
 
 pub struct Intersection<'a> {
     pub distance: f32,

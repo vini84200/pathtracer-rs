@@ -272,6 +272,7 @@ impl State {
             self.config.width = new_size.width;
             self.config.height = new_size.height;
             self.surface.configure(&self.device, &self.config);
+            self.pathtracer.resize(new_size.width, new_size.height);
         }
     }
 
@@ -328,11 +329,11 @@ impl State {
                 };
                 true
             }
-            WindowEvent::CursorMoved { device_id, position, modifiers } => {
+            WindowEvent::CursorMoved { device_id: _, position, ..} => {
                 if self.mouse_pressed {
                     let delta_x = (self.mouse_position.x - position.x) as f32;
                     let delta_y = (self.mouse_position.y - position.y) as f32;
-                    self.pathtracer.camera_mut().rotate(delta_x as f32, delta_y as f32);
+                    self.pathtracer.camera_mut().rotate(delta_x, delta_y);
                     // self.window.set_cursor_position(winit::dpi::PhysicalPosition::new(self.size.width as i32 / 2, self.size.height as i32 / 2)).unwrap();
                     // self.mouse_position = winit::dpi::PhysicalPosition::new(self.size.width as f64 / 2.0f64, self.size.height as f64 / 2.0f64);
                 }
@@ -368,7 +369,7 @@ impl State {
         let new_texture = texture::Texture::from_image(
             &self.device,
             &self.queue,
-            &image,
+            image,
             Some("diffuse_texture"),
         )
         .unwrap();

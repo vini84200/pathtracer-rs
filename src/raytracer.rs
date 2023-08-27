@@ -1,9 +1,9 @@
 use std::f32::EPSILON;
 
-use image::{DynamicImage, GenericImage, Rgba, Pixel};
+use image::{DynamicImage, GenericImage};
 use nalgebra::Vector3;
 
-use crate::{color::{self, ColorF32}, geometry::{Sphere, Point, Ray, Intersectable}, camera::Camera, world::World, light::Light};
+use crate::{geometry::{Point, Ray}, camera::Camera, world::World, color::ColorF32};
 pub struct Pathtracer {
     width: u32,
     height: u32,
@@ -68,7 +68,7 @@ impl Pathtracer {
         &mut self.world
     }
 
-    fn object_color(&self, intersection: crate::world::Intersection<'_>, x: u32, y: u32) -> ColorF32 {
+    fn object_color(&self, intersection: crate::world::Intersection<'_>, _x: u32, _y: u32) -> ColorF32 {
         let mut acc = ColorF32::new(0.0, 0.0, 0.0);
         for light in &self.world.lights {
             let direction_to_light = light.direction_from(&intersection.point).normalize();

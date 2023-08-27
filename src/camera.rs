@@ -1,4 +1,4 @@
-use nalgebra::{Vector3, Unit, Rotation3};
+use nalgebra::Vector3;
 
 use crate::geometry::Point;
 

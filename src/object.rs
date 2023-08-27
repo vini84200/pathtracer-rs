@@ -1,6 +1,6 @@
 use nalgebra::Vector3;
 
-use crate::{geometry::{Intersectable, Ray, Point}, material::Material};
+use crate::{geometry::{Intersectable, Point}, material::Material};
 
 
 pub trait Object: Intersectable {
