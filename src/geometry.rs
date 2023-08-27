@@ -3,6 +3,10 @@ use nalgebra::{Vector3, Point3};
 
 pub type Point = Point3<f32>;
 
+
+pub const ORIGIN: &Point = &Point::new(0.0, 0.0, 0.0);
+
+
 pub struct Sphere {
     pub center: Point,
     pub radius: f32,

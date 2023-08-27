@@ -79,7 +79,7 @@ impl Pathtracer {
                     continue;
                 }
             }
-            let light_intensity = light.intensity() / direction_to_light.magnitude_squared();
+            let light_intensity = light.intensity() / light.attenuation(direction_to_light.magnitude_squared() + EPSILON);
             let light_reflected = intersection.object.material().albedo() / std::f32::consts::PI;
             let light_color = light.color();
 

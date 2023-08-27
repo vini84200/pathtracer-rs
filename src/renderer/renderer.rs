@@ -1,7 +1,7 @@
 use nalgebra::{Vector3};
 use winit::{event::WindowEvent, window::Window};
 use wgpu::util::DeviceExt;
-use crate::{renderer::texture, raytracer::Pathtracer, geometry::{Sphere, Plane, Point}, color, light::PointLight};
+use crate::{renderer::texture, raytracer::Pathtracer, geometry::{Sphere, Plane, Point}, color, light::{PointLight, DirectionalLight}};
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
@@ -379,5 +379,11 @@ impl State {
                 PointLight::new(Point::new(10., 5., -5.), color::WHITE, 4.)
             )
         );
+
+        w.add_light(
+            Box::new(
+                DirectionalLight::new(Vector3::new(0., -1., 1.), color::WHITE, 0.8)
+            )
+        )
     }
 }
