@@ -382,7 +382,7 @@ impl State {
 
         w.add_light(
             Box::new(
-                DirectionalLight::new(Vector3::new(0., -1., 1.), color::WHITE, 0.8)
+                DirectionalLight::new(Vector3::new(0., -1., -1.), color::WHITE, 0.8)
             )
         )
     }

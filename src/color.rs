@@ -47,6 +47,14 @@ impl Mul<f32> for ColorF32 {
     }
 }
 
+impl Mul<Self> for ColorF32 {
+    type Output = Self;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        Self::new(self.r * rhs.r, self.g * rhs.g, self.b * rhs.b)
+    }
+}
+
 impl Add<Self> for ColorF32 {
     type Output = Self;
 

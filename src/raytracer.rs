@@ -84,7 +84,8 @@ impl Pathtracer {
             let light_color = light.color();
 
             let diffuse_factor = direction_to_light.normalize().dot(&intersection.object.surface_normal(&intersection.point));
-            let diffuse = *light_color * light_intensity * diffuse_factor;
+            let diffuse_color = intersection.object.material().color();
+            let diffuse = *light_color * light_intensity * diffuse_factor * diffuse_color;
             let specular = ColorF32::new(0.0, 0.0, 0.0);
             let color = (diffuse + specular) * light_reflected;
             acc = acc + color
