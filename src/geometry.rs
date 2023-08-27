@@ -1,4 +1,4 @@
-use crate::{material::{Material, Diffuse}, color::ColorF32, camera::Camera};
+use crate::{material::{Material, Diffuse}, color::ColorF32, camera::Camera, object::Object};
 use nalgebra::{Vector3, Point3};
 
 pub type Point = Point3<f32>;
@@ -58,6 +58,10 @@ impl Ray {
 
         Self::new(camera.origin().to_owned(), direction)
     }
+
+    pub(crate) fn point_at(&self, distance: f32) -> nalgebra::OPoint<f32, nalgebra::Const<3>> {
+        self.origin + (self.direction * distance)
+    }
 }
 
 pub trait Intersectable {
@@ -85,4 +89,59 @@ impl Intersectable for Sphere {
         Some(t)
     }
     
+}
+
+impl Object for Sphere {
+    fn surface_normal(&self, point: &Point) -> Vector3<f32> {
+        (point - self.center).normalize()
+    }
+
+    fn material(&self) -> &Box<dyn Material> {
+        &self.material
+    }
+}
+
+pub struct Plane {
+    pub origin: Point,
+    pub normal: Vector3<f32>,
+    pub material: Box<dyn Material>,
+}
+
+impl Plane {
+    pub fn new(origin: Point, normal: Vector3<f32>, material: Box<dyn Material>) -> Self {
+        Self {
+            origin,
+            normal,
+            material,
+        }
+    }
+}
+
+impl Intersectable for Plane {
+    fn intersect(&self, ray: &Ray) -> Option<f32> {
+        // https://en.wikipedia.org/wiki/Line%E2%80%93plane_intersection
+        let denom = self.normal.dot(&ray.direction);
+        let t = (self.origin - ray.origin).dot(&self.normal) / denom;
+        if denom == 0.0 {
+            // ray is parallel to plane
+            // we consider this to be no intersection 
+            return None;
+        }
+        if t < 0.0 {
+            // plane is behind ray
+            return None;
+        }
+        Some(t)
+
+    }
+}
+
+impl Object for Plane {
+    fn surface_normal(&self, _point: &Point) -> Vector3<f32> {
+        self.normal
+    }
+
+    fn material(&self) -> &Box<dyn Material> {
+        &self.material
+    }
 }

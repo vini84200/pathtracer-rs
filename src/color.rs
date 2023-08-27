@@ -1,3 +1,5 @@
+use std::ops::{Mul, Add};
+
 use image::Pixel;
 
 
@@ -19,6 +21,40 @@ impl From<ColorU8> for image::Rgba<u8> {
     }
 }
 
+impl ColorF32 {
+    pub fn new(r: f32, g: f32, b: f32) -> Self {
+        Self {
+            r,
+            g,
+            b,
+            a: 1.0,
+        }
+    }
+
+    pub fn lerp(a: Self, b: Self, t: f32) -> Self {
+        let r = a.r + (b.r - a.r) * t;
+        let g = a.g + (b.g - a.g) * t;
+        let b = a.b + (b.b - a.b) * t;
+        Self::new(r, g, b)
+    }
+}
+
+impl Mul<f32> for ColorF32 {
+    type Output = Self;
+
+    fn mul(self, rhs: f32) -> Self::Output {
+        Self::new(self.r * rhs, self.g * rhs, self.b * rhs)
+    }
+}
+
+impl Add<Self> for ColorF32 {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self::new(self.r + rhs.r, self.g + rhs.g, self.b + rhs.b)
+    }
+}
+
 impl From<ColorF32> for image::Rgba<u8> {
     fn from(val: ColorF32) -> Self {
         image::Rgba::from_slice(&[
@@ -28,8 +64,8 @@ impl From<ColorF32> for image::Rgba<u8> {
             (val.a * 255.0).min(255.) as u8,
         ]).to_owned()
     }
-    
 }
+
 
 pub const RED : ColorF32 = ColorF32 { r: 1.0, g: 0.0, b: 0.0, a: 1.0 };
 pub const GREEN : ColorF32 = ColorF32 { r: 0.0, g: 1.0, b: 0.0, a: 1.0 };

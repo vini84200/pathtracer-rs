@@ -10,6 +10,9 @@ mod raytracer;
 mod renderer;
 mod material;
 mod camera;
+mod object;
+mod light;
+mod world;
 
 use raytracer::Pathtracer;
 
@@ -27,8 +30,8 @@ async fn run() {
         .build(&event_loop)
         .unwrap();
 
-    let mut raytracer = Pathtracer::new(window.inner_size().width, window.inner_size().height);
     let mut state = renderer::renderer::State::new(window).await;
+    state.init();
 
     event_loop.run(move |event, _, control_flow| match event {
         Event::WindowEvent {

@@ -1,6 +1,7 @@
+use nalgebra::{Vector3};
 use winit::{event::WindowEvent, window::Window};
 use wgpu::util::DeviceExt;
-use crate::{renderer::texture, raytracer::Pathtracer};
+use crate::{renderer::texture, raytracer::Pathtracer, geometry::{Sphere, Plane, Point}, color, light::PointLight};
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
@@ -356,5 +357,27 @@ impl State {
         output.present();
 
         Ok(())
+    }
+
+    pub(crate) fn init(&mut self) {
+        let mut w = self.pathtracer.world();
+        w.add_object(
+            Box::new(Sphere::new(0.0, 0.0, -5.0, 1.0, color::RED))
+        );
+        w.add_object(
+            Box::new( Sphere::new(2.0, 0.0, -5.0, 1.0, color::GREEN)));
+        
+
+        w.add_object(
+                Box::new( Plane::new(Point::new(0.,-1.,0.), Vector3::new(0.,1.,0.), 
+                Box::new(crate::material::Diffuse::new(color::WHITE))
+            ))
+        );
+
+        w.add_light(
+            Box::new(
+                PointLight::new(Point::new(10., 5., -5.), color::WHITE, 4.)
+            )
+        );
     }
 }

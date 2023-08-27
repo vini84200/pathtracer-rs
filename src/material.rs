@@ -3,6 +3,9 @@ use crate::color::ColorF32;
 
 pub trait Material {
     fn color(&self) -> ColorF32;
+    fn albedo(&self) -> f32 {
+        1.0
+    }
 }
 
 pub struct Diffuse {

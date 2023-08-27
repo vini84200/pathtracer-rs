@@ -1,19 +1,30 @@
+use std::f32::EPSILON;
+
 use image::{DynamicImage, GenericImage, Rgba, Pixel};
 use nalgebra::Vector3;
 
-use crate::{color, geometry::{Sphere, Point, Ray, Intersectable}, camera::Camera};
+use crate::{color::{self, ColorF32}, geometry::{Sphere, Point, Ray, Intersectable}, camera::Camera, world::World, light::Light};
 pub struct Pathtracer {
     width: u32,
     height: u32,
     image: DynamicImage,
+    world: World,
+    camera: Camera,
 }
 
 impl Pathtracer {
     pub fn new(width : u32, height : u32) -> Self {
+        let camera = Camera::new(
+            Point::new(0.0, 0.0, 0.0), 
+            Vector3::new(0.0, 0.0, 1.0), 90.0,
+            width, 
+            height);
         Self {
             width,
             height,
             image: DynamicImage::new_rgba8(width, height),
+            world: World::new(),
+            camera
         }
     }
 
@@ -25,25 +36,24 @@ impl Pathtracer {
 
     pub fn render(&mut self) {
 
-        let sphere = Sphere::new(0.0, 0.0, -7.0, 1.0, color::GREEN);
-        let camera = Camera::new(Point::new(0.0, 0.0, 0.0), Vector3::new(0.0, 0.0, 1.0), 90.0, self.width, self.height);
-
+        let now = std::time::Instant::now();
         for y in 0..self.height {
             for x in 0..self.width {
-                let r = Ray::new_prime(x, y, &camera);
-                self.trace(&sphere, r, x, y);
+                let r = Ray::new_prime(x, y, &self.camera);
+                self.trace(r, x, y);
 
             }
         }
+        let elapsed = now.elapsed();
+        println!("Elapsed: {} ms ({:.2} fps)", elapsed.as_millis(), 1000.0 / elapsed.as_millis() as f32);
     }
 
-    fn trace(&mut self, sphere: &Sphere, r: Ray, x: u32, y: u32) {
-        if let Some(d) = sphere.intersect(&r) {
-            let p = r.origin + (r.direction * d);
-            let c = sphere.material.color();
-            self.image.put_pixel(x, y, c.into());
+    fn trace(&mut self, r: Ray, x: u32, y: u32) {
+        if let Some(intersection) = self.world.intersect(&r) {
+            let color = self.object_color(intersection, x, y);
+            self.image.put_pixel(x, y, color.into());
         } else {
-            let c = Rgba::from(color::BLACK);
+            let c = self.world.background_color(r);
             self.image.put_pixel(x, y, c);
         }
     }
@@ -53,4 +63,33 @@ impl Pathtracer {
 
         &self.image
     }
+
+    pub(crate) fn world(&mut self) -> &mut World{
+        &mut self.world
+    }
+
+    fn object_color(&self, intersection: crate::world::Intersection<'_>, x: u32, y: u32) -> ColorF32 {
+        let mut acc = ColorF32::new(0.0, 0.0, 0.0);
+        for light in &self.world.lights {
+            let direction_to_light = light.direction_from(&intersection.point).normalize();
+            let shadow_ray = Ray::new(intersection.point+direction_to_light*0.001, direction_to_light);
+            let shadow_intersection = self.world.intersect(&shadow_ray);
+            if let Some(blocking) = shadow_intersection {
+                if blocking.distance < direction_to_light.magnitude()  {
+                    continue;
+                }
+            }
+            let light_intensity = light.intensity() / direction_to_light.magnitude_squared();
+            let light_reflected = intersection.object.material().albedo() / std::f32::consts::PI;
+            let light_color = light.color();
+
+            let diffuse_factor = direction_to_light.normalize().dot(&intersection.object.surface_normal(&intersection.point));
+            let diffuse = *light_color * light_intensity * diffuse_factor;
+            let specular = ColorF32::new(0.0, 0.0, 0.0);
+            let color = (diffuse + specular) * light_reflected;
+            acc = acc + color
+        }
+        acc
+    }
+
 }
