@@ -7,7 +7,9 @@ use winit::{
 mod color;
 mod geometry;
 mod raytracer;
-mod state;
+mod renderer;
+mod material;
+mod camera;
 
 use raytracer::Pathtracer;
 
@@ -26,7 +28,7 @@ async fn run() {
         .unwrap();
 
     let mut raytracer = Pathtracer::new(window.inner_size().width, window.inner_size().height);
-    let mut state = state::State::new(window).await;
+    let mut state = renderer::renderer::State::new(window).await;
 
     event_loop.run(move |event, _, control_flow| match event {
         Event::WindowEvent {

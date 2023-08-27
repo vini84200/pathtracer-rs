@@ -1,16 +1,18 @@
 use winit::{event::WindowEvent, window::Window};
 use wgpu::util::DeviceExt;
-use bytemuck;
+use crate::{renderer::texture, raytracer::Pathtracer};
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 struct Vertex {
     position: [f32; 3],
+    tex_coords: [f32; 2],
 }
 
 impl Vertex {
-    const ATTRIBS: [wgpu::VertexAttribute; 1] = wgpu::vertex_attr_array![
-        0 => Float32x3
+    const ATTRIBS: [wgpu::VertexAttribute; 2] = wgpu::vertex_attr_array![
+        0 => Float32x3,
+        1 => Float32x2,
     ];
     fn desc() -> wgpu::VertexBufferLayout<'static> {
         use std::mem;
@@ -24,10 +26,10 @@ impl Vertex {
 
 // Cria um retângulo que ocupa toda a tela
 const VERTICES: &[Vertex] = &[
-    Vertex { position: [-1.0, 1.0, 0.0]},
-    Vertex { position: [1.0, 1.0, 0.0]},
-    Vertex { position: [-1.0, -1.0, 0.0]},
-    Vertex { position: [1.0, -1.0, 0.0]},
+    Vertex { position: [-1.0, 1.0, 0.0], tex_coords: [1.0, 0.0]},
+    Vertex { position: [1.0, 1.0, 0.0], tex_coords: [0.0, 0.0]},
+    Vertex { position: [-1.0, -1.0, 0.0], tex_coords:[1.0,1.0]},
+    Vertex { position: [1.0, -1.0, 0.0], tex_coords: [0.0, 1.0]},
 ];
 
 const INDICES: &[u16] = &[
@@ -47,6 +49,9 @@ pub struct State {
     vertex_buffer: wgpu::Buffer,
     num_indices: u32,
     index_buffer: wgpu::Buffer,
+    diffuse_bind_group: wgpu::BindGroup,
+    diffuse_texture: texture::Texture,
+    pathtracer: crate::raytracer::Pathtracer,
 }
 
 impl State {
@@ -105,11 +110,65 @@ impl State {
         };
         surface.configure(&device, &config);
 
-        let shader = device.create_shader_module(wgpu::include_wgsl!("shader.wgsl"));
+        let diffuse_texture = texture::Texture::from_bytes(&device, &queue, include_bytes!("../../assets/texture.png"), "diffuse_texture").unwrap();
+
+
+        let texture_bind_group_layout =
+        device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Texture {
+                        multisampled: false,
+                        view_dimension: wgpu::TextureViewDimension::D2,
+                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    // This should match the filterable field of the
+                    // corresponding Texture entry above.
+                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                    count: None,
+                },
+            ],
+            label: Some("texture_bind_group_layout"),
+        });
+
+
+        let diffuse_bind_group = device.create_bind_group(
+            &wgpu::BindGroupDescriptor {
+                layout: &texture_bind_group_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: wgpu::BindingResource::TextureView(&diffuse_texture.view),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: wgpu::BindingResource::Sampler(&diffuse_texture.sampler),
+                    }
+                ],
+                label: Some("diffuse_bind_group"),
+            }
+        );
+
+
+        
+         
+            
+        let shader = if cfg!(fragment_pathtracer) {
+            device.create_shader_module(wgpu::include_wgsl!("../shader.wgsl"))
+        }  else {
+            device.create_shader_module(wgpu::include_wgsl!("../image_shader.wgsl"))
+        };
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
-                bind_group_layouts: &[],
+                bind_group_layouts: &[&texture_bind_group_layout],
                 push_constant_ranges: &[],
             });
 
@@ -166,6 +225,8 @@ impl State {
 
         let num_indices = INDICES.len() as u32;
 
+        let pathtracer = Pathtracer::new(size.width, size.height);
+
         Self {
             window,
             surface,
@@ -176,7 +237,10 @@ impl State {
             render_pipeline,
             vertex_buffer,
             index_buffer,
-            num_indices
+            num_indices,
+            diffuse_bind_group,
+            diffuse_texture,
+            pathtracer
         }
     }
 
@@ -197,7 +261,9 @@ impl State {
         false
     }
 
-    pub fn update(&mut self) {}
+    pub fn update(&mut self) {
+        self.pathtracer.render();
+    }
 
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
         let output = self.surface.get_current_texture()?;
@@ -210,6 +276,56 @@ impl State {
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
                 label: Some("Render Encoder"),
             });
+        // Update the image data
+
+        let image = self.pathtracer.present();
+        let new_texture = texture::Texture::from_image(&self.device, &self.queue, &image, Some("diffuse_texture")).unwrap();
+        self.diffuse_texture = new_texture;
+        let texture_bind_group_layout =
+        self.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Texture {
+                        multisampled: false,
+                        view_dimension: wgpu::TextureViewDimension::D2,
+                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    // This should match the filterable field of the
+                    // corresponding Texture entry above.
+                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                    count: None,
+                },
+            ],
+            label: Some("texture_bind_group_layout"),
+        });
+
+
+        let diffuse_bind_group = self.device.create_bind_group(
+            &wgpu::BindGroupDescriptor {
+                layout: &texture_bind_group_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: wgpu::BindingResource::TextureView(&self.diffuse_texture.view),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: wgpu::BindingResource::Sampler(&self.diffuse_texture.sampler),
+                    }
+                ],
+                label: Some("diffuse_bind_group"),
+            }
+
+        );
+        self.diffuse_bind_group = diffuse_bind_group;
+        
         {
             let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("Render Pass"),
@@ -230,6 +346,7 @@ impl State {
             });
 
             render_pass.set_pipeline(&self.render_pipeline);
+            render_pass.set_bind_group(0, &self.diffuse_bind_group, &[]);
             render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
             render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
             render_pass.draw_indexed(0..self.num_indices, 00, 0..1)
