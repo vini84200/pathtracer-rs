@@ -21,3 +21,6 @@ lazy_static = "1.4"
 human-panic = {version = "*", default-features = false}
 rayon = "1.5"
 bvh = "0.7.2"
+
+[features]
+cli_mode = []

@@ -157,4 +157,22 @@ impl Pathtracer {
         }
     }
 
+    pub(crate) fn samples(&self) -> u64 {
+        self.samples
+    }
+
+    pub(crate) fn save_as(&self, output: String)  {
+            if !std::path::Path::new(&output).exists() {
+                // Save the image
+                let dynamic_image = DynamicImage::ImageRgba32F(self.image.clone());
+                dynamic_image.into_rgba8().save(&output).unwrap();
+                let path_withou_extension = path::Path::new(&output).file_stem().unwrap().to_str().unwrap();
+                self.image.save_with_format(path::Path::new(&format!("{}.exr",path_withou_extension)), image::ImageFormat::OpenExr).unwrap();
+            }
+            else {
+                println!("File already exists. Saving in results folder");
+                self.save();
+            }
+    }
+
 }
