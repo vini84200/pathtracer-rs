@@ -37,6 +37,7 @@ impl Pathtracer {
         self.width = width;
         self.height = height;
         self.image = Rgba32FImage::new(width, height);
+        self.camera.resize(width, height);
         self.samples = 0;
     }
 

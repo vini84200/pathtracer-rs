@@ -102,6 +102,11 @@ impl Camera {
         self.direction = direction;
     }
 
+    pub(crate) fn resize(&mut self, width: u32, height: u32) {
+        self.width = width;
+        self.height = height;
+    }
+
 
 
 }
