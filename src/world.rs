@@ -28,14 +28,9 @@ impl World {
     pub fn intersect(&self, r: &crate::geometry::Ray) -> Option<Intersection> {
         let mut closest: Option<Intersection> = None;
         for object in &self.objects {
-            if let Some(distance) = object.intersect(r) {
-                if closest.is_none() || distance < closest.as_ref().unwrap().distance {
-                    closest = Some(Intersection {
-                        distance,
-                        point: r.point_at(distance),
-                        object,
-                        normal: object.surface_normal(&r.point_at(distance)),
-                    });
+            if let Some(intersection) = object.intersection(r, object) {
+                if closest.is_none() || intersection.distance < closest.as_ref().unwrap().distance {
+                    closest = Some(intersection);
                 }
             }
         }

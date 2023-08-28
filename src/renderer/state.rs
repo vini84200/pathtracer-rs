@@ -1,9 +1,11 @@
+use std::path::Path;
+
 use crate::{
     color,
-    geometry::{Plane, Point, Sphere},
+    geometry::{Plane, Point, Sphere, Mesh}, 
     light::{DirectionalLight, PointLight},
     raytracer::Pathtracer,
-    renderer::texture, world::World,
+    renderer::texture, world::World, material,
 };
 use nalgebra::Vector3;
 use wgpu::util::DeviceExt;
@@ -465,43 +467,43 @@ impl State {
 
     pub(crate) fn init(&mut self) {
         let w = self.pathtracer.world();
-        w.add_object(Box::new(
-            Sphere::new_with_material(0.0, 2.0, -4.0, 1.5, 
-                Box::new(crate::material::Metal::new(color::BLUE, 0.1)))));
-        w.add_object(Box::new(
-            Sphere::new_with_material(3.0, 0.0, -5.0, 1.0, 
-                Box::new(crate::material::Metal::new(color::WHITE, 0.0)))));
+        // w.add_object(Box::new(
+        //     Sphere::new_with_material(0.0, 2.0, -4.0, 1.5, 
+        //         Box::new(crate::material::Diffuse::new(color::BLUE)))));
+        // w.add_object(Box::new(
+        //     Sphere::new_with_material(3.0, 0.0, -5.0, 1.0, 
+        //         Box::new(crate::material::Metal::new(color::WHITE, 0.0)))));
 
-        w.add_object(Box::new(Plane::new(
-            Point::new(0., -1., 0.),
-            Vector3::new(0., 1., 0.),
-            Box::new(crate::material::Metal::new(color::WHITE, 0.4)),
-        )));
+        // w.add_object(Box::new(Plane::new(
+        //     Point::new(0., -1., 0.),
+        //     Vector3::new(0., 1., 0.),
+        //     Box::new(crate::material::Metal::new(color::WHITE, 0.4)),
+        // )));
 
-        w.add_object(Box::new(
-            Sphere::new_with_material(-3.0, 8.0, -5.0, 1.0, 
-                Box::new(crate::material::Emmisive::new(color::ORANGE, 10.3)))));
+        // w.add_object(Box::new(
+        //     Sphere::new_with_material(-3.0, 2.0, -5.0, 1.0, 
+        //         Box::new(crate::material::Emmisive::new(color::ORANGE, 10.3)))));
 
-        w.add_object(Box::new(
-            Sphere::new_with_material(-3.0, 0.7, -2.0, 1.0, 
-                Box::new(crate::material::Dielectric::new(color::WHITE, 0.0, 1.4)))));
+        // w.add_object(Box::new(
+        //     Sphere::new_with_material(-3.0, 0.7, -2.0, 1.0, 
+        //         Box::new(crate::material::Dielectric::new(color::WHITE, 0.05, 1.4)))));
+        let mut mesh = Mesh::from_obj(Path::new("assets/cow.obj"), Box::new(material::Diffuse::new(color::WHITE)));
+        mesh.build_bvh();
+        w.add_object( Box::new(mesh));
+        // w.add_object(
+        //     Box::new(
+        //         Rectangle::new(
+        //             Point::new(-10.0, 12.0, -10.0),
+        //             Point::new(10.0, 3.0, 10.0),
+        //             Box::new(crate::material::Diffuse::new(color::WHITE)),
+        //         )
+        //     )
+        // );
 
     }
 
     pub fn create_cornell_box(world: &mut World) {
         // Above 
-        world.add_object(Box::new(Plane::new(
-            Point::new(0., 1., 0.),
-            Vector3::new(0., -1., 0.),
-            Box::new(crate::material::Diffuse::new(color::WHITE)),
-        )));
-        // Below
-        world.add_object(Box::new(Plane::new(
-            Point::new(0., -1., 0.),
-            Vector3::new(0., 1., 0.),
-            Box::new(crate::material::Diffuse::new(color::WHITE)),
-        )));
-        // Left
 
     }
 }

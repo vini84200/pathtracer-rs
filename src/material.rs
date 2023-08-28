@@ -7,7 +7,7 @@ pub struct Scattering {
     pub attenuation: ColorF32,
 }
 
-pub trait Material {
+pub trait Material : Send + Sync{ 
     fn color(&self) -> ColorF32;
     fn is_reflective(&self) -> bool {
         false
