@@ -9,6 +9,9 @@ pub trait Material {
     fn is_reflective(&self) -> bool {
         false
     }
+    fn emissivity(&self) -> ColorF32 {
+        ColorF32::new(0.0, 0.0, 0.0)
+    }
 }
 
 pub struct Diffuse {
@@ -28,30 +31,27 @@ impl Material for Diffuse {
     }
 }
 
-pub struct Reflective {
+
+pub struct Emmisive {
     color: ColorF32,
-    albedo: f32,
+    intensity: f32,
 }
 
-impl Reflective {
-    pub fn new(color: crate::color::Color<f32>, albedo: f32) -> Self {
+impl Emmisive {
+    pub fn new(color: crate::color::Color<f32>, intensity: f32) -> Self {
         Self {
             color,
-            albedo,
+            intensity,
         }
     }
 }
 
-impl Material for Reflective {
+impl Material for Emmisive {
     fn color(&self) -> ColorF32 {
         self.color
     }
 
-    fn albedo(&self) -> f32 {
-        self.albedo
-    }
-
-    fn is_reflective(&self) -> bool {
-        true
+    fn emissivity(&self) -> ColorF32 {
+        self.color * self.intensity
     }
 }

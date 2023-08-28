@@ -3,7 +3,7 @@ use std::f32::EPSILON;
 use image::{DynamicImage, GenericImage};
 use nalgebra::Vector3;
 
-use crate::{geometry::{Point, Ray}, camera::Camera, world::World, color::ColorF32, material};
+use crate::{geometry::{Point, Ray, self}, camera::Camera, world::World, color::ColorF32, material};
 pub struct Pathtracer {
     width: u32,
     height: u32,
@@ -46,15 +46,15 @@ impl Pathtracer {
         let elapsed = now.elapsed();
         println!("Elapsed: {} ms ({:.2} fps)", elapsed.as_millis(), 1000.0 / elapsed.as_millis() as f32);
     }
+    const SINGLE_SHOT_SAMPLES: i32 = 16;
 
     fn trace(&mut self, r: Ray, x: u32, y: u32, depth: u16) {
         if let Some(intersection) = self.world.intersect(&r) {
             let mut color = ColorF32::new(0.0, 0.0, 0.0);
-            const SINGLE_SHOT_SAMPLES: i32 = 8;
-            for _ in 0..SINGLE_SHOT_SAMPLES {
-                color = color + self.object_color(&intersection, &r, 0);
+            for _ in 0..Self::SINGLE_SHOT_SAMPLES {
+                color = color + self.object_color(&intersection, &r, depth);
             }
-            color = color / SINGLE_SHOT_SAMPLES as f32;
+            color = color / Self::SINGLE_SHOT_SAMPLES as f32;
             self.image.put_pixel(x, y, color.into());
         } else {
             let c = self.world.background_color(&r);
@@ -71,8 +71,7 @@ impl Pathtracer {
     pub(crate) fn world(&mut self) -> &mut World{
         &mut self.world
     }
-    const RAYS: i32 = 2;
-    const MAX_DEPTH: u16 = 100;
+    const MAX_DEPTH: u16 = 8;
 
     fn object_color(&self, intersection: &crate::world::Intersection<'_>, ray: &Ray, depth: u16) -> ColorF32 {
         let mut acc = ColorF32::new(0.0, 0.0, 0.0);
@@ -81,10 +80,12 @@ impl Pathtracer {
             let mut diffuse = ColorF32::new(0.0, 0.0, 0.0);
             //
             if depth < Self::MAX_DEPTH {
-                let random_ray = Ray::new_random(intersection.point, intersection.object.surface_normal(&intersection.point));
+                let direction = geometry::random_in_hemi_lamberian(intersection.object.surface_normal(&intersection.point));
+                let random_ray = Ray::new_with_eps(intersection.point, direction, 0.001);
+                
                 let random_intersection = self.world.intersect(&random_ray);
                 if let Some(random_intersection) = random_intersection {
-                    diffuse = self.object_color(&random_intersection, &random_ray, depth + 1) * 0.5;
+                    diffuse = self.object_color(&random_intersection, &random_ray, depth + 1) * intersection.object.material().color();
                 } else {
                     diffuse = self.world.background_color(&random_ray);
                 }
@@ -105,8 +106,4 @@ impl Pathtracer {
         &mut self.camera
     }
 
-}
-
-fn get_reflection_vector(normal: &Vector3<f32>, incident: &Vector3<f32>) -> Vector3<f32> {
-    incident - 2.0 * incident.dot(&normal) * normal
 }

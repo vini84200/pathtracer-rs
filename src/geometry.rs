@@ -1,6 +1,9 @@
+use std::{borrow::BorrowMut, cell::RefCell};
+
 use crate::{material::{Material, Diffuse}, color::ColorF32, camera::Camera, object::Object};
 use nalgebra::{Vector3, Point3};
-use rand::Rng;
+use rand::{Rng, distributions::Distribution, thread_rng};
+use lazy_static::lazy_static;
 
 pub type Point = Point3<f32>;
 
@@ -80,17 +83,55 @@ impl Ray {
         self.origin + (self.direction * distance)
     }
 
-    pub(crate) fn new_random(point: nalgebra::OPoint<f32, nalgebra::Const<3>>, normal: Vector3<f32>) -> Ray {
+    pub(crate) fn new_random_hemi(point: nalgebra::OPoint<f32, nalgebra::Const<3>>, normal: Vector3<f32>) -> Ray {
         let mut rng = rand::thread_rng();
         let mut direction = Vector3::new(rng.gen_range(-1.0..1.0), rng.gen_range(0.0..1.0), rng.gen_range(-1.0..1.0));
         if direction.dot(&normal) < 0.0 {
             direction = -direction;
         }
         Ray {
-            origin: point + (normal * 0.001),
+            origin: point,
             direction: direction.normalize(),
         }
     }
+
+    pub(crate) fn new_with_eps(point: Point, direction: Vector3<f32>, eps: f32) -> Ray {
+        Self { origin: point + (direction * eps), direction }
+    }
+}
+
+lazy_static! {
+    pub static ref DISTRIBUTION : rand::distributions::Uniform<f32> = rand::distributions::Uniform::new(-1.0, 1.0);
+}
+
+thread_local! {
+    pub static RNG : RefCell<rand_pcg::Pcg64> = RefCell::new(rand_pcg::Pcg64::new(0xcafef00dd15ea5e5, 0xa02bdbf7bb3c0a7));
+}
+
+fn random_in_unit_sphere() -> Vector3<f32> {
+    RNG.with(|rng| {
+        let mut rng = rng.borrow_mut();
+        // let mut rng = thread_rng();
+        let mut a = Vector3::new(rng.sample(*DISTRIBUTION), rng.sample(*DISTRIBUTION), rng.sample(*DISTRIBUTION));
+        while a.magnitude_squared() >= 1.0 {
+            a = Vector3::new(rng.sample(*DISTRIBUTION), rng.sample(*DISTRIBUTION), rng.sample(*DISTRIBUTION));
+        }
+        a
+    })
+}
+
+fn random_in_hemisphere(normal: Vector3<f32>) -> Vector3<f32> {
+    let a = random_in_unit_sphere().normalize();
+    if a.dot(&normal) > 0.0 {
+        a
+    } else {
+        -a
+    }
+}
+
+pub fn random_in_hemi_lamberian(normal: Vector3<f32>) -> Vector3<f32> {
+    let a = random_in_hemisphere(normal);
+    a + normal
 }
 
 pub trait Intersectable {
