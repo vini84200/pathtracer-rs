@@ -474,20 +474,20 @@ impl State {
         //     Sphere::new_with_material(3.0, 0.0, -5.0, 1.0, 
         //         Box::new(crate::material::Metal::new(color::WHITE, 0.0)))));
 
-        // w.add_object(Box::new(Plane::new(
-        //     Point::new(0., -1., 0.),
-        //     Vector3::new(0., 1., 0.),
-        //     Box::new(crate::material::Metal::new(color::WHITE, 0.4)),
-        // )));
+        w.add_object(Box::new(Plane::new(
+            Point::new(0., -1., 0.),
+            Vector3::new(0., 1., 0.),
+            Box::new(crate::material::Diffuse::new(color::WHITE)),
+        )));
 
-        // w.add_object(Box::new(
-        //     Sphere::new_with_material(-3.0, 2.0, -5.0, 1.0, 
-        //         Box::new(crate::material::Emmisive::new(color::ORANGE, 10.3)))));
+        w.add_object(Box::new(
+            Sphere::new_with_material(-3.0, 2.0, -5.0, 0.2, 
+                Box::new(crate::material::Emmisive::new(color::ORANGE, 2.3)))));
 
         // w.add_object(Box::new(
         //     Sphere::new_with_material(-3.0, 0.7, -2.0, 1.0, 
         //         Box::new(crate::material::Dielectric::new(color::WHITE, 0.05, 1.4)))));
-        let mut mesh = Mesh::from_obj(Path::new("assets/cow.obj"), Box::new(material::Diffuse::new(color::WHITE)));
+        let mut mesh = Mesh::from_obj(Path::new("assets/cow.obj"), Box::new(material::Dielectric::new(color::WHITE, 0.05, 2.1)));
         mesh.build_bvh();
         w.add_object( Box::new(mesh));
         // w.add_object(

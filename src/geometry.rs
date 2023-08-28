@@ -342,23 +342,30 @@ impl Mesh {
                     // Has to accept f v/vt/vn v/vt/vn v/vt/vn
                     // Or f v//vn v//vn v//vn
                     // Or f v v v
-                    
-                        let mut vertex = parts.next().unwrap().split('/');
-                        let a = vertex.next().unwrap().parse::<usize>().unwrap() - 1;
-                        let _ = vertex.next().unwrap().parse::<usize>().unwrap() - 1;
-                        let _ = vertex.next().unwrap().parse::<usize>().unwrap() - 1;
+                    // Find out which one it is
+                    let has_slash = line.contains("/");
+                    let (a, b, c) = if has_slash {
+                        let mut parts = line.split_whitespace();
+                        parts.next();
+                        let a = parts.next().unwrap();
+                        let b = parts.next().unwrap();
+                        let c = parts.next().unwrap();
+                        let a = a.split("/").next().unwrap().parse::<usize>().unwrap() - 1;
+                        let b = b.split("/").next().unwrap().parse::<usize>().unwrap() - 1;
+                        let c = c.split("/").next().unwrap().parse::<usize>().unwrap() - 1;
+                        (a, b, c)
+                    } else {
+                        let mut parts = line.split_whitespace();
+                        parts.next();
+                        let a = parts.next().unwrap().parse::<usize>().unwrap() - 1;
+                        let b = parts.next().unwrap().parse::<usize>().unwrap() - 1;
+                        let c = parts.next().unwrap().parse::<usize>().unwrap() - 1;
+                        (a, b, c)
+                    };
 
-                        let mut vertex = parts.next().unwrap().split('/');
-                        let b = vertex.next().unwrap().parse::<usize>().unwrap() - 1;
-                        let _ = vertex.next().unwrap().parse::<usize>().unwrap() - 1;
-                        let _ = vertex.next().unwrap().parse::<usize>().unwrap() - 1;
 
-                        let mut vertex = parts.next().unwrap().split('/');
-                        let c = vertex.next().unwrap().parse::<usize>().unwrap() - 1;
-                        let _ = vertex.next().unwrap().parse::<usize>().unwrap() - 1;
-                        let _ = vertex.next().unwrap().parse::<usize>().unwrap() - 1;
-                        println!("{} {} {} ", a, b, c);
-                        triangles.push(Triangle::new(vertices[a], vertices[b], vertices[c]));
+                    println!("{} {} {} ", a, b, c);
+                    triangles.push(Triangle::new(vertices[a], vertices[b], vertices[c]));
                 },
                 _ => {}
             }
