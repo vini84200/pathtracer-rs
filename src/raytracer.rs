@@ -55,7 +55,7 @@ impl Pathtracer {
         self.samples += Self::SINGLE_SHOT_SAMPLES as u64;
         let elapsed = now.elapsed();
         let totalElapsed = self.started.elapsed();
-        println!("Elapsed: {:?} (fps: {}, {:?}) {} samples ({} ms/sa)", totalElapsed, 1.0 / (elapsed.as_secs_f32() + EPSILON), elapsed, self.samples, elapsed.as_millis() as f32 / self.samples as f32);
+        println!("Elapsed: {:?} (fps: {}, {:?}) {} samples ({} ms/sa)", totalElapsed, 1.0 / (elapsed.as_secs_f32() + EPSILON), elapsed, self.samples, totalElapsed.as_millis() as f32 / self.samples as f32);
 
 
     }
