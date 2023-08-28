@@ -108,7 +108,7 @@ impl Pathtracer {
     pub(crate) fn world(&mut self) -> &mut World{
         &mut self.world
     }
-    const MAX_DEPTH: u16 = 8;
+    const MAX_DEPTH: u16 = 32;
 
     fn ray_color(&self, intersection: &crate::world::Intersection<'_>, ray: &Ray, depth: u16) -> ColorF32 {
         let material = intersection.object.material();
@@ -150,6 +150,7 @@ impl Pathtracer {
                 // Save the image
                 let dynamic_image = DynamicImage::ImageRgba32F(self.image.clone());
                 dynamic_image.into_rgba8().save(&filename).unwrap();
+                self.image.save_with_format(path::Path::new(&format!("results/render_hdr_{}.exr",i)), image::ImageFormat::OpenExr).unwrap();
                 break;
             }
             i += 1;

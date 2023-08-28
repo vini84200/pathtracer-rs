@@ -3,7 +3,7 @@ use crate::{
     geometry::{Plane, Point, Sphere},
     light::{DirectionalLight, PointLight},
     raytracer::Pathtracer,
-    renderer::texture,
+    renderer::texture, world::World,
 };
 use nalgebra::Vector3;
 use wgpu::util::DeviceExt;
@@ -38,19 +38,19 @@ impl Vertex {
 const VERTICES: &[Vertex] = &[
     Vertex {
         position: [-1.0, 1.0, 0.0],
-        tex_coords: [1.0, 0.0],
-    },
-    Vertex {
-        position: [1.0, 1.0, 0.0],
         tex_coords: [0.0, 0.0],
     },
     Vertex {
+        position: [1.0, 1.0, 0.0],
+        tex_coords: [1.0, 0.0],
+    },
+    Vertex {
         position: [-1.0, -1.0, 0.0],
-        tex_coords: [1.0, 1.0],
+        tex_coords: [0.0, 1.0],
     },
     Vertex {
         position: [1.0, -1.0, 0.0],
-        tex_coords: [0.0, 1.0],
+        tex_coords: [1.0, 1.0],
     },
 ];
 
@@ -479,12 +479,29 @@ impl State {
         )));
 
         w.add_object(Box::new(
-            Sphere::new_with_material(-3.0, -1.0, -5.0, 1.0, 
-                Box::new(crate::material::Emmisive::new(color::ORANGE, 1.3)))));
+            Sphere::new_with_material(-3.0, 8.0, -5.0, 1.0, 
+                Box::new(crate::material::Emmisive::new(color::ORANGE, 10.3)))));
 
         w.add_object(Box::new(
-            Sphere::new_with_material(-3.0, 0.0, -2.0, 1.0, 
-                Box::new(crate::material::Diffuse::new(color::ORANGE)))));
+            Sphere::new_with_material(-3.0, 0.7, -2.0, 1.0, 
+                Box::new(crate::material::Dielectric::new(color::WHITE, 0.0, 1.4)))));
+
+    }
+
+    pub fn create_cornell_box(world: &mut World) {
+        // Above 
+        world.add_object(Box::new(Plane::new(
+            Point::new(0., 1., 0.),
+            Vector3::new(0., -1., 0.),
+            Box::new(crate::material::Diffuse::new(color::WHITE)),
+        )));
+        // Below
+        world.add_object(Box::new(Plane::new(
+            Point::new(0., -1., 0.),
+            Vector3::new(0., 1., 0.),
+            Box::new(crate::material::Diffuse::new(color::WHITE)),
+        )));
+        // Left
 
     }
 }

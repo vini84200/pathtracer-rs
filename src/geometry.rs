@@ -153,6 +153,12 @@ impl Intersectable for Sphere {
         if t1 < 0.0 && t2 < 0.0 {
             return None;
         }
+        if t1 < 0.0 {
+            return Some(t2);
+        }
+        if t2 < 0.0 {
+            return Some(t1);
+        }
 
         let t = if t1 < t2 { t1 } else { t2 };
     
