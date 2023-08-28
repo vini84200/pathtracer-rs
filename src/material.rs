@@ -133,6 +133,12 @@ fn refract(v: Vector3<f32>, normal: Vector3<f32>, ni_over_nt: f32) -> Option<Vec
     Some(r_out_perp + r_out_parallel)
 }
 
+fn double_reflectance(cosine: f32, ref_idx: f32) -> f32 {
+    let r0 = (1.0 - ref_idx) / (1.0 + ref_idx);
+    let r0 = r0 * r0;
+    r0 + (1.0 - r0) * (1.0 - cosine).powf(5.0)
+}
+
 impl Dielectric {
     pub fn new(color: crate::color::Color<f32>, fuzz: f32, refraction_index: f32) -> Self {
         Self {
@@ -161,8 +167,16 @@ impl Material for Dielectric {
         } else {
             -intersection.normal
         };
-        let refracted = refract(ray.direction, normal, refraction_ratio);
-        let refracted_fuzz = refracted? + self.fuzz * geometry::random_in_unit_sphere();
+        let cos_theta = (-ray.direction).dot(&normal).min(1.0);
+        let sin_theta = (1.0 - cos_theta * cos_theta).sqrt();
+        let cannot_refract = refraction_ratio * sin_theta > 1.0;
+        let direction = if cannot_refract || double_reflectance(cos_theta, refraction_ratio) > rand::random() {
+            reflect(ray.direction, normal)
+        } else {
+            refract(ray.direction, normal, refraction_ratio)?
+        };
+
+        let refracted_fuzz = direction + self.fuzz * geometry::random_in_unit_sphere();
         let scattered = Ray::new_with_eps(intersection.point, refracted_fuzz, 0.1);
         Some(
             Scattering {
