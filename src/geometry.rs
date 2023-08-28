@@ -14,7 +14,7 @@ pub const ORIGIN: &Point = &Point::new(0.0, 0.0, 0.0);
 pub struct Sphere {
     pub center: Point,
     pub radius: f32,
-    pub material: Box<dyn Material>,
+    pub material: Box<dyn Material + Send + Sync>,
 }
 
 impl Sphere {
@@ -26,7 +26,7 @@ impl Sphere {
 
         }
     }
-    pub fn new_with_material(x: f32, y: f32, z: f32, radius: f32, material: Box<dyn Material>) -> Self {
+    pub fn new_with_material(x: f32, y: f32, z: f32, radius: f32, material: Box<dyn Material+Send+Sync>) -> Self {
         Self {
             center: Point::new(x, y, z),
             radius,
@@ -166,7 +166,7 @@ impl Object for Sphere {
         (point - self.center).normalize()
     }
 
-    fn material(&self) -> &Box<dyn Material> {
+    fn material(&self) -> &Box<dyn Material + Send + Sync> {
         &self.material
     }
 }
@@ -174,11 +174,11 @@ impl Object for Sphere {
 pub struct Plane {
     pub origin: Point,
     pub normal: Vector3<f32>,
-    pub material: Box<dyn Material>,
+    pub material: Box<dyn Material + Send + Sync>,
 }
 
 impl Plane {
-    pub fn new(origin: Point, normal: Vector3<f32>, material: Box<dyn Material>) -> Self {
+    pub fn new(origin: Point, normal: Vector3<f32>, material: Box<dyn Material + Send + Sync>) -> Self {
         Self {
             origin,
             normal,
@@ -211,7 +211,7 @@ impl Object for Plane {
         self.normal
     }
 
-    fn material(&self) -> &Box<dyn Material> {
+    fn material(&self) -> &Box<dyn Material + Send  + Sync> {
         &self.material
     }
 }
