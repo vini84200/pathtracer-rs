@@ -114,8 +114,9 @@ impl Pathtracer {
                 color::BLACK
             }
         } else {
-            // Max depth reached, so no color
-            color::BLACK
+            // Max depth reached, don't recurse
+            material.color() * 0.1
+            
         };
         // Reflection
 

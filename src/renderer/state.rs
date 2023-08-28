@@ -451,17 +451,20 @@ impl State {
         let w = self.pathtracer.world();
         w.add_object(Box::new(
             Sphere::new_with_material(0.0, 2.0, -4.0, 1.5, 
-                Box::new(crate::material::Diffuse::new(color::GRAY)))));
+                Box::new(crate::material::Metal::new(color::BLUE, 0.1)))));
         w.add_object(Box::new(
             Sphere::new_with_material(3.0, 0.0, -5.0, 1.0, 
-                Box::new(crate::material::Diffuse::new(color::GREEN)))));
+                Box::new(crate::material::Metal::new(color::WHITE, 0.0)))));
 
         w.add_object(Box::new(Plane::new(
             Point::new(0., -1., 0.),
             Vector3::new(0., 1., 0.),
-            Box::new(crate::material::Diffuse::new(color::WHITE)),
+            Box::new(crate::material::Metal::new(color::WHITE, 0.4)),
         )));
 
+        w.add_object(Box::new(
+            Sphere::new_with_material(-3.0, -1.0, -5.0, 1.0, 
+                Box::new(crate::material::Emmisive::new(color::ORANGE, 1.3)))));
 
     }
 }

@@ -1,3 +1,5 @@
+use nalgebra::Vector3;
+
 use crate::{color::ColorF32, geometry::{Intersectable, Ray, self}, world::Intersection};
 
 pub struct Scattering {
@@ -73,4 +75,44 @@ impl Material for Emmisive {
     fn emissivity(&self) -> ColorF32 {
         self.color * self.intensity
     }
+}
+
+pub fn reflect (v : Vector3<f32>, n : Vector3<f32>) -> Vector3<f32> {
+    v - 2.0 * v.dot(&n) * n
+}
+
+pub struct Metal {
+    color: ColorF32,
+    fuzz: f32,
+}
+
+impl Metal {
+    pub fn new(color: crate::color::Color<f32>, fuzz: f32) -> Self {
+        Self {
+            color,
+            fuzz,
+        }
+    }
+}
+
+impl Material for Metal {
+    fn color(&self) -> ColorF32 {
+        self.color
+    }
+
+    fn scatter(&self, ray: &Ray, intersection: &Intersection) -> Option<Scattering> {
+        let reflected = reflect(ray.direction, intersection.object.surface_normal(&intersection.point));
+        let random_ray = Ray::new_with_eps(intersection.point, reflected + self.fuzz * geometry::random_in_unit_sphere(), 0.001);
+        if random_ray.direction.dot(&intersection.object.surface_normal(&intersection.point)) > 0.0 {
+            Some(
+                Scattering {
+                    ray: random_ray,
+                    attenuation: self.color,
+                }
+            )
+        } else {
+            None
+        }
+    }
+    
 }

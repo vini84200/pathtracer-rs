@@ -108,7 +108,7 @@ thread_local! {
     pub static RNG : RefCell<rand_pcg::Pcg64> = RefCell::new(rand_pcg::Pcg64::new(0xcafef00dd15ea5e5, 0xa02bdbf7bb3c0a7));
 }
 
-fn random_in_unit_sphere() -> Vector3<f32> {
+pub fn random_in_unit_sphere() -> Vector3<f32> {
     RNG.with(|rng| {
         let mut rng = rng.borrow_mut();
         // let mut rng = thread_rng();
