@@ -369,7 +369,7 @@ impl State {
         let new_texture = texture::Texture::from_image(
             &self.device,
             &self.queue,
-            image,
+            &image,
             Some("diffuse_texture"),
         )
         .unwrap();
@@ -451,7 +451,7 @@ impl State {
         let w = self.pathtracer.world();
         w.add_object(Box::new(
             Sphere::new_with_material(0.0, 2.0, -4.0, 1.5, 
-                Box::new(crate::material::Diffuse::new(color::ColorF32::new(0.5,0.5,0.5))))));
+                Box::new(crate::material::Diffuse::new(color::GRAY)))));
         w.add_object(Box::new(
             Sphere::new_with_material(3.0, 0.0, -5.0, 1.0, 
                 Box::new(crate::material::Diffuse::new(color::GREEN)))));
@@ -465,8 +465,8 @@ impl State {
         w.add_object(
             Box::new(
                 Sphere::new_with_material(
-                3.0, 100.0, -5.0, 1.0,
-                Box::new(crate::material::Emmisive::new(color::WHITE, 100.)),
+                -4.0, 00.0, -5.0, 1.0,
+                Box::new(crate::material::Emmisive::new(color::WHITE, 1.)),
             ))
         );
 

@@ -1,15 +1,17 @@
 use std::f32::EPSILON;
 
-use image::{DynamicImage, GenericImage};
+use image::{DynamicImage, GenericImage, GenericImageView, Rgba32FImage};
 use nalgebra::Vector3;
 
-use crate::{geometry::{Point, Ray, self}, camera::Camera, world::World, color::ColorF32, material};
+use crate::{geometry::{Point, Ray, self}, camera::Camera, world::World, color::{ColorF32, self}, material};
 pub struct Pathtracer {
     width: u32,
     height: u32,
-    image: DynamicImage,
+    image: Rgba32FImage,
     world: World,
     camera: Camera,
+    samples: u64,
+    started: std::time::Instant,
 }
 
 impl Pathtracer {
@@ -22,16 +24,19 @@ impl Pathtracer {
         Self {
             width,
             height,
-            image: DynamicImage::new_rgba8(width, height),
+            image: Rgba32FImage::new(width, height),
             world: World::new(),
-            camera
+            camera,
+            samples: 0,
+            started: std::time::Instant::now(),
         }
     }
 
     pub fn resize(&mut self, width : u32, height : u32) {
         self.width = width;
         self.height = height;
-        self.image = DynamicImage::new_rgba8(width, height);
+        self.image = Rgba32FImage::new(width, height);
+        self.samples = 0;
     }
 
     pub fn render(&mut self) {
@@ -43,41 +48,51 @@ impl Pathtracer {
                 self.trace(r, x, y, 0);
             }
         }
+        self.samples += Self::SINGLE_SHOT_SAMPLES as u64;
         let elapsed = now.elapsed();
-        println!("Elapsed: {} ms ({:.2} fps)", elapsed.as_millis(), 1000.0 / elapsed.as_millis() as f32);
+        let totalElapsed = self.started.elapsed();
+        println!("Elapsed: {:?} (fps: {}, {:?}) Samples: {}", totalElapsed, 1.0 / (elapsed.as_secs_f32() + EPSILON), elapsed, self.samples);
     }
-    const SINGLE_SHOT_SAMPLES: i32 = 16;
+    const SINGLE_SHOT_SAMPLES: i32 = 8;
 
     fn trace(&mut self, r: Ray, x: u32, y: u32, depth: u16) {
-        if let Some(intersection) = self.world.intersect(&r) {
+        let color = if let Some(intersection) = self.world.intersect(&r) {
             let mut color = ColorF32::new(0.0, 0.0, 0.0);
             for _ in 0..Self::SINGLE_SHOT_SAMPLES {
                 color = color + self.object_color(&intersection, &r, depth);
             }
             color = color / Self::SINGLE_SHOT_SAMPLES as f32;
-            self.image.put_pixel(x, y, color.into());
+            color
         } else {
-            let c = self.world.background_color(&r);
-            self.image.put_pixel(x, y, c.into());
+           self.world.background_color(&r)
+        };
+        // Load the color from the current pixel
+        if self.samples > 0 {
+            let orig = self.image.get_pixel(x, y);
+            let orig : ColorF32 = orig.into();
+            let new = orig * (self.samples as f32 / (self.samples as f32 + Self::SINGLE_SHOT_SAMPLES as f32)) + color * (Self::SINGLE_SHOT_SAMPLES as f32 / (self.samples as f32 + Self::SINGLE_SHOT_SAMPLES as f32));
+            self.image.put_pixel(x, y, new.into());
+        } else {
+            self.image.put_pixel(x, y, color.into());
         }
+
     }
 
-    pub fn present(&self) -> &image::DynamicImage {
+    pub fn present(&self) ->image::DynamicImage { 
         // ...
-
-        &self.image
+        DynamicImage::ImageRgba32F(self.image.clone())
     }
 
     pub(crate) fn world(&mut self) -> &mut World{
         &mut self.world
     }
-    const MAX_DEPTH: u16 = 8;
+    const MAX_DEPTH: u16 = 4;
 
     fn object_color(&self, intersection: &crate::world::Intersection<'_>, ray: &Ray, depth: u16) -> ColorF32 {
-        let mut acc = ColorF32::new(0.0, 0.0, 0.0);
+        let mut acc = intersection.object.material().emissivity();
         // Diffuse
         {
-            let mut diffuse = ColorF32::new(0.0, 0.0, 0.0);
+            let diffuse : ColorF32;
             //
             if depth < Self::MAX_DEPTH {
                 let direction = geometry::random_in_hemi_lamberian(intersection.object.surface_normal(&intersection.point));
@@ -87,10 +102,10 @@ impl Pathtracer {
                 if let Some(random_intersection) = random_intersection {
                     diffuse = self.object_color(&random_intersection, &random_ray, depth + 1) * intersection.object.material().color();
                 } else {
-                    diffuse = self.world.background_color(&random_ray);
+                    diffuse = self.world.background_color(&random_ray) * intersection.object.material().color();
                 }
             } else {
-                diffuse = self.world.background_color(ray);
+                diffuse = color::BLACK;
             }
             acc = acc + diffuse;
         } 
