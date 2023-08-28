@@ -23,6 +23,7 @@ async fn main() {
 
 async fn run() {
     env_logger::init();
+    human_panic::setup_panic!();
 
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new()

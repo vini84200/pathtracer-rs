@@ -18,3 +18,4 @@ bytemuck = {version = "1.12", features = ["derive"]}
 anyhow = "1.0"
 nalgebra = "0.32.3"
 lazy_static = "1.4"
+human-panic = {version = "*", default-features = false}

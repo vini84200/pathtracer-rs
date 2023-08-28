@@ -462,24 +462,6 @@ impl State {
             Box::new(crate::material::Diffuse::new(color::WHITE)),
         )));
 
-        w.add_object(
-            Box::new(
-                Sphere::new_with_material(
-                -4.0, 00.0, -5.0, 1.0,
-                Box::new(crate::material::Emmisive::new(color::WHITE, 1.)),
-            ))
-        );
 
-        w.add_light(Box::new(PointLight::new(
-            Point::new(10., 5., -5.),
-            color::WHITE,
-            4.,
-        )));
-
-        w.add_light(Box::new(DirectionalLight::new(
-            Vector3::new(0., -1., -1.),
-            color::WHITE,
-            0.8,
-        )))
     }
 }

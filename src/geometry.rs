@@ -59,7 +59,7 @@ impl Ray {
     pub fn new_prime (x : u32, y : u32, camera : &Camera) -> Self {
         let camera_direction = camera.direction().to_owned();
         let camera_origin = camera.origin().to_owned();
-        let fov = camera.fov();
+        let fov = camera.fov().to_radians();
         let width = camera.width();
         let height = camera.height();
 
@@ -129,8 +129,8 @@ fn random_in_hemisphere(normal: Vector3<f32>) -> Vector3<f32> {
     }
 }
 
-pub fn random_in_hemi_lamberian(normal: Vector3<f32>) -> Vector3<f32> {
-    let a = random_in_hemisphere(normal);
+pub fn random_lambertian(normal: Vector3<f32>) -> Vector3<f32> {
+    let a = random_in_unit_sphere().normalize();
     a + normal
 }
 

@@ -3,7 +3,7 @@ use std::f32::EPSILON;
 use image::{DynamicImage, GenericImage, GenericImageView, Rgba32FImage};
 use nalgebra::Vector3;
 
-use crate::{geometry::{Point, Ray, self}, camera::Camera, world::World, color::{ColorF32, self}, material};
+use crate::{geometry::{Point, Ray, self}, camera::Camera, world::World, color::{ColorF32, self}, material::{self, Scattering}};
 pub struct Pathtracer {
     width: u32,
     height: u32,
@@ -42,6 +42,10 @@ impl Pathtracer {
     pub fn render(&mut self) {
 
         let now = std::time::Instant::now();
+        if self.samples == 0 {
+            println!("Rendering {}x{} image", self.width, self.height);
+            self.started = std::time::Instant::now();
+        }
         for y in 0..self.height {
             for x in 0..self.width {
                 let r = Ray::new_prime(x, y, &self.camera);
@@ -51,15 +55,17 @@ impl Pathtracer {
         self.samples += Self::SINGLE_SHOT_SAMPLES as u64;
         let elapsed = now.elapsed();
         let totalElapsed = self.started.elapsed();
-        println!("Elapsed: {:?} (fps: {}, {:?}) Samples: {}", totalElapsed, 1.0 / (elapsed.as_secs_f32() + EPSILON), elapsed, self.samples);
+        println!("Elapsed: {:?} (fps: {}, {:?}) {} samples ({} ms/sa)", totalElapsed, 1.0 / (elapsed.as_secs_f32() + EPSILON), elapsed, self.samples, elapsed.as_millis() as f32 / self.samples as f32);
+
+
     }
-    const SINGLE_SHOT_SAMPLES: i32 = 8;
+    const SINGLE_SHOT_SAMPLES: i32 = 4;
 
     fn trace(&mut self, r: Ray, x: u32, y: u32, depth: u16) {
         let color = if let Some(intersection) = self.world.intersect(&r) {
             let mut color = ColorF32::new(0.0, 0.0, 0.0);
             for _ in 0..Self::SINGLE_SHOT_SAMPLES {
-                color = color + self.object_color(&intersection, &r, depth);
+                color = color + self.ray_color(&intersection, &r, depth);
             }
             color = color / Self::SINGLE_SHOT_SAMPLES as f32;
             color
@@ -88,33 +94,35 @@ impl Pathtracer {
     }
     const MAX_DEPTH: u16 = 4;
 
-    fn object_color(&self, intersection: &crate::world::Intersection<'_>, ray: &Ray, depth: u16) -> ColorF32 {
-        let mut acc = intersection.object.material().emissivity();
+    fn ray_color(&self, intersection: &crate::world::Intersection<'_>, ray: &Ray, depth: u16) -> ColorF32 {
+        let emisivty  = intersection.object.material().emissivity();
+        let material = intersection.object.material();
         // Diffuse
-        {
-            let diffuse : ColorF32;
-            //
-            if depth < Self::MAX_DEPTH {
-                let direction = geometry::random_in_hemi_lamberian(intersection.object.surface_normal(&intersection.point));
-                let random_ray = Ray::new_with_eps(intersection.point, direction, 0.001);
+        let diffuse = if depth < Self::MAX_DEPTH {
+            let scatter = material.scatter(ray, intersection);
+            if let Some(scatter) = scatter {
+                let random_ray = scatter.ray;
                 
                 let random_intersection = self.world.intersect(&random_ray);
                 if let Some(random_intersection) = random_intersection {
-                    diffuse = self.object_color(&random_intersection, &random_ray, depth + 1) * intersection.object.material().color();
+                    self.ray_color(&random_intersection, &random_ray, depth + 1) * scatter.attenuation
                 } else {
-                    diffuse = self.world.background_color(&random_ray) * intersection.object.material().color();
+                    self.world.background_color(&random_ray) * scatter.attenuation
                 }
             } else {
-                diffuse = color::BLACK;
+                // No scatter, so no color
+                color::BLACK
             }
-            acc = acc + diffuse;
-        } 
+        } else {
+            // Max depth reached, so no color
+            color::BLACK
+        };
         // Reflection
 
         // Refraction
 
         
-        acc
+        emisivty + diffuse
     }
 
     pub(crate) fn camera_mut(&mut self) -> &mut Camera {
