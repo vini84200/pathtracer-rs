@@ -72,7 +72,7 @@ impl Pathtracer {
 
 
     }
-    const SINGLE_SHOT_SAMPLES: i32 = 64;
+    const SINGLE_SHOT_SAMPLES: i32 = 32;
 
     fn trace(&self, r: Ray, x: u32, y: u32, depth: u16) -> ColorF32 {
         let color = if let Some(intersection) = self.world.intersect(&r) {

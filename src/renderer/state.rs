@@ -466,5 +466,9 @@ impl State {
             Sphere::new_with_material(-3.0, -1.0, -5.0, 1.0, 
                 Box::new(crate::material::Emmisive::new(color::ORANGE, 1.3)))));
 
+        w.add_object(Box::new(
+            Sphere::new_with_material(-3.0, 0.0, -2.0, 1.0, 
+                Box::new(crate::material::Diffuse::new(color::ORANGE)))));
+
     }
 }
