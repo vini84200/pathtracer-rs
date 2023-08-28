@@ -4,6 +4,8 @@ use winit::{
     window::WindowBuilder,
 };
 
+use crate::renderer::state;
+
 mod color;
 mod geometry;
 mod raytracer;
@@ -13,6 +15,7 @@ mod camera;
 mod object;
 mod light;
 mod world;
+mod scene;
 
 
 
@@ -31,6 +34,12 @@ async fn run() {
         let width = args.next().unwrap().parse::<u32>().unwrap();
         let height = args.next().unwrap().parse::<u32>().unwrap();
         let mut pathtracer = raytracer::Pathtracer::new(width, height);
+
+        // Load scene
+        let w = pathtracer.world();
+        scene::build_scene(w);
+        
+
         let samples = args.next().unwrap().parse::<u64>().unwrap();
         while pathtracer.samples() < samples {
             pathtracer.render();
