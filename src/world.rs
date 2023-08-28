@@ -46,13 +46,14 @@ impl World {
     const Bm : f32 = 0.0003;
     const g: f32 =  0.9800;
 
-    pub(crate) fn background_color(&self, r: &crate::geometry::Ray) -> ColorF32 {
+    pub fn background_color(&self, r: &crate::geometry::Ray) -> ColorF32 {
         let direction = r.direction.normalize();
         if direction.y < 0.0 {
             return color::BLACK;
         }
-        let sun_direction = nalgebra::Vector3::new(0.3, 0.2,- 0.3);
+        let sun_direction = nalgebra::Vector3::new(0.3, -1.1,- 0.3);
         let sun_direction = sun_direction.normalize();
+        // https://github.com/shff/opengl_sky
         let nitrogen : ColorF32 = ColorF32::new(0.650, 0.570, 0.475);
         let kr = Self::Br / ColorF32::pow(nitrogen, 4.0);
         let km = Self::Bm / ColorF32::pow(nitrogen, 0.84);

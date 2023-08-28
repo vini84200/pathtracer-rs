@@ -286,34 +286,50 @@ impl State {
                 Some(VirtualKeyCode::W) => {
                     if input.state == winit::event::ElementState::Pressed {
                         self.pathtracer.camera_mut().move_forward(true);
+                        self.pathtracer.reset();
                     } else if input.state == winit::event::ElementState::Released {
                         self.pathtracer.camera_mut().move_forward(false);
+                        self.pathtracer.reset();
                     };
                     true
                 }
                 Some(VirtualKeyCode::S) => {
                     if input.state == winit::event::ElementState::Pressed {
                         self.pathtracer.camera_mut().move_backward(true);
+                        self.pathtracer.reset();
                     } else if input.state == winit::event::ElementState::Released {
                         self.pathtracer.camera_mut().move_backward(false);
+                        self.pathtracer.reset();
                     };
                     true
                 }
                 Some(VirtualKeyCode::A) => {
                     if input.state == winit::event::ElementState::Pressed {
                         self.pathtracer.camera_mut().move_left(true);
+                        self.pathtracer.reset();
                     } else if input.state == winit::event::ElementState::Released {
                         self.pathtracer.camera_mut().move_left(false);
+                        self.pathtracer.reset();
                     };
                     true
                 }
                 Some(VirtualKeyCode::D) => {
                     if input.state == winit::event::ElementState::Pressed {
                         self.pathtracer.camera_mut().move_right(true);
+                        self.pathtracer.reset();
                     } else if input.state == winit::event::ElementState::Released {
                         self.pathtracer.camera_mut().move_right(false);
+                        self.pathtracer.reset();
                     };
                     true
+                }
+                Some(VirtualKeyCode::P) => {
+                    if winit::event::ElementState::Pressed == input.state {
+                        self.pathtracer.save();
+                        true
+                    } else {
+                        false
+                    }
                 }
                 _ => false,
             },

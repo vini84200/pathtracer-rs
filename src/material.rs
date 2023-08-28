@@ -42,7 +42,7 @@ impl Material for Diffuse {
         } else {
             direction
         };
-        let random_ray = Ray::new_with_eps(intersection.point, direction, 0.001);
+        let random_ray = Ray::new_with_eps(intersection.point, direction, 0.00001);
         Some(
             Scattering {
                 ray: random_ray,

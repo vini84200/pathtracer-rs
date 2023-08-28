@@ -1,4 +1,4 @@
-use std::f32::EPSILON;
+use std::{f32::EPSILON, path};
 
 use image::{DynamicImage, Rgba32FImage};
 use nalgebra::Vector3;
@@ -36,8 +36,12 @@ impl Pathtracer {
     pub fn resize(&mut self, width : u32, height : u32) {
         self.width = width;
         self.height = height;
-        self.image = Rgba32FImage::new(width, height);
         self.camera.resize(width, height);
+        self.image = Rgba32FImage::new(self.width, self.height);
+        self.reset();
+    }
+
+    pub fn reset(&mut self) {
         self.samples = 0;
     }
 
@@ -104,13 +108,12 @@ impl Pathtracer {
     pub(crate) fn world(&mut self) -> &mut World{
         &mut self.world
     }
-    const MAX_DEPTH: u16 = 4;
+    const MAX_DEPTH: u16 = 8;
 
     fn ray_color(&self, intersection: &crate::world::Intersection<'_>, ray: &Ray, depth: u16) -> ColorF32 {
-        let emisivty  = intersection.object.material().emissivity();
         let material = intersection.object.material();
-        // Diffuse
-        let diffuse = if depth < Self::MAX_DEPTH {
+        let emisivty  = material.emissivity();
+        let reflection = if depth < Self::MAX_DEPTH {
             let scatter = material.scatter(ray, intersection);
             if let Some(scatter) = scatter {
                 let random_ray = scatter.ray;
@@ -127,19 +130,30 @@ impl Pathtracer {
             }
         } else {
             // Max depth reached, don't recurse
-            material.color() * 0.1
+            material.color() * 0.1 // Ambiente?
             
         };
-        // Reflection
-
-        // Refraction
-
         
-        emisivty + diffuse
+        emisivty + reflection
     }
 
     pub(crate) fn camera_mut(&mut self) -> &mut Camera {
         &mut self.camera
+    }
+
+    pub(crate) fn save(&self) {
+        // Find a unique filename
+        let mut i = 0;
+        loop {
+            let filename = format!("results/render_{}.png", i);
+            if !std::path::Path::new(&filename).exists() {
+                // Save the image
+                let dynamic_image = DynamicImage::ImageRgba32F(self.image.clone());
+                dynamic_image.into_rgba8().save(&filename).unwrap();
+                break;
+            }
+            i += 1;
+        }
     }
 
 }
