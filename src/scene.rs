@@ -15,12 +15,12 @@ pub fn build_scene(w: &mut World) {
             Point::new(0., -1., 0.),
             Vector3::new(0., 1., 0.),
             // Box::new(crate::material::Diffuse::new(color::WHITE)),
-            Box::new(crate::material::Dielectric::new(color::WHITE, 0.05, 2.417)),
+            Box::new(crate::material::Dielectric::new(color::GRAY, 0.05, 2.417)),
         )));
 
         w.add_object(Box::new(
             Sphere::new_with_material(-3.0, 2.0, -5.0, 0.2, 
-                Box::new(crate::material::Emmisive::new(color::ORANGE, 2.3)))));
+                Box::new(crate::material::Emmisive::new(color::ORANGE, 12.3)))));
 
         // w.add_object(Box::new(
         //     Sphere::new_with_material(-3.0, 0.7, -2.0, 1.0, 

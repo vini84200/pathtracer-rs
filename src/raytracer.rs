@@ -18,7 +18,7 @@ pub struct Pathtracer {
 impl Pathtracer {
     pub fn new(width : u32, height : u32) -> Self {
         let camera = Camera::new(
-            Point::new(0.0, 0.0, 0.0), 
+            Point::new(3.0, 0.0, 5.2), 
             Vector3::new(0.0, 0.0, -1.0), 90.0,
             width, 
             height);
@@ -173,6 +173,10 @@ impl Pathtracer {
                 println!("File already exists. Saving in results folder");
                 self.save();
             }
+    }
+
+    pub(crate) fn printCamera(&self)  {
+        println!("Camera is at {:?}", self.camera.origin());
     }
 
 }

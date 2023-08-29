@@ -47,7 +47,7 @@ impl World {
         if direction.y < 0.0 {
             return color::BLACK;
         }
-        let sun_direction = nalgebra::Vector3::new(0.3, -1.1,- 0.3);
+        let sun_direction = nalgebra::Vector3::new(0.3, 0.31,0.3);
         let sun_direction = sun_direction.normalize();
         // https://github.com/shff/opengl_sky
         let nitrogen : ColorF32 = ColorF32::new(0.650, 0.570, 0.475);

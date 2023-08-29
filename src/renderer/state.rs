@@ -333,6 +333,11 @@ impl State {
                         false
                     }
                 }
+                Some(VirtualKeyCode::C) => {
+                    // Print camera pos
+                    self.pathtracer.printCamera();
+                    true
+                }
                 _ => false,
             },
             WindowEvent::MouseInput {
