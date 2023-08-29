@@ -238,7 +238,7 @@ impl Triangle {
 impl Intersectable for Triangle {
     fn intersect(&self, ray: &Ray) -> Option<f32> {
         // https://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm
-        let epsilon = 0.0001;
+        let epsilon = 0.000001;
         let edge1 = self.b - self.a;
         let edge2 = self.c - self.a;
         let h = ray.direction.cross(&edge2);
@@ -255,7 +255,7 @@ impl Intersectable for Triangle {
         let q = s.cross(&edge1);
         let v = f * ray.direction.dot(&q);
 
-        if !(0.0..=1.0).contains(&v) {
+        if v < 0.0 || u + v > 1.0 {
             return None;
         }
 
